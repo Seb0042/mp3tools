@@ -15,7 +15,7 @@ func PrintInfos(s string, d fs.DirEntry, err error) error {
 		if err != nil {
 			fmt.Println("Error while opening mp3 file: ", err)
 		}
-
+		fmt.Printf("File:%s .", s)
 		// Read tags.
 		fmt.Printf("Genre: %s, Title: %s, Artist: %s\n", tag.Genre(), tag.Title(), tag.Artist())
 		fmt.Println("Comments")

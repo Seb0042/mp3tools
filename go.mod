@@ -1,7 +1,5 @@
-module mp3tools
+module mtools
 
 go 1.18
 
-require github.com/bogem/id3v2 v1.2.0
-
-require golang.org/x/text v0.3.7 // indirect
+require github.com/dhowden/tag v0.0.0-20220618230019-adf36e896086

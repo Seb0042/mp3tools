@@ -22,9 +22,9 @@ func main() {
 		os.Exit(-1)
 	}
 	switch *actionPtr {
-	case "dupes":
+	case "loaddupes":
 
-		os.Remove("./mtools_dupes.db")
+		//os.Remove("./mtools_dupes.db")
 		db, err := sql.Open("sqlite3", "./mtools_dupes.db")
 		if err != nil {
 			fmt.Println(err)
@@ -37,27 +37,51 @@ func main() {
 		}
 		w := &actions.FilesWalker{DB: db}
 		filepath.WalkDir(*dirPtr, w.GetFiles)
-		sqlStmt = `select a.id, a.Artist,a.Title,a.Album,a.Year,a.Filetype,a.filesize,a.Filepath from files a,files b where a.title = b.title and b.filepath != a.filepath;`
+	case "dupes":
+		db, err := sql.Open("sqlite3", "./mtools_dupes.db")
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer db.Close()
+		sqlStmt := `select distinct a.Artist,a.Title from files a,files b where a.title = b.title and a.artist = b.artist and b.filetype != a.filetype order by a.title,a.artist; `
 		rows, err := db.Query(sqlStmt)
 		if err != nil {
 			fmt.Println(err, sqlStmt)
 		}
 		defer rows.Close()
-		var id int
+		//		var id int
 		var FilePath string
 		var FileType string
 		var Title string
-		var Album string
+		//		var Album string
 		var Artist string
-		var Year int
+		//	var Year int
 		var FileSize int64
+		stmt, err := db.Prepare("select filetype,filesize,filepath from files where artist = ? and title = ? order by title, artist,filetype,filesize")
+		if err != nil {
+			fmt.Println(err)
+		}
 
+		defer stmt.Close()
 		for rows.Next() {
-			err = rows.Scan(&id, &Artist, &Title, &Album, &Year, &FileType, &FileSize, &FilePath)
+			err = rows.Scan(&Artist, &Title)
 			if err != nil {
 				fmt.Println(err)
 			}
-			fmt.Printf("|%6d|%-30s|%-30s|%30s|%4d|%6s|%12d|%s|\n", id, Artist, Title, Album, Year, FileType, FileSize, FilePath)
+
+			rows_result, err := stmt.Query(Artist, Title)
+			if err != nil {
+
+			}
+			for rows_result.Next() {
+				err = rows_result.Scan(&FileType, &FileSize, &FilePath)
+
+				if err != nil {
+					fmt.Println(err)
+				}
+				fmt.Printf("%-45s|%-40s|%-6s|%12d|%s|\n", Artist, Title, FileType, FileSize, FilePath)
+			}
+
 		}
 		err = rows.Err()
 		if err != nil {

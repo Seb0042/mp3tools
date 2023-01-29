@@ -43,7 +43,8 @@ func (w *FilesWalker) GetFiles(s string, d fs.DirEntry, err error) error {
 		m, err := tag.ReadFrom(f)
 		if err != nil {
 			fmt.Printf("error reading file: %v =>%s\n", err, s)
-			return errors.New("Read")
+			//return errors.New("Read")
+			return nil
 		}
 		var size int64
 		fi, err := f.Stat()
@@ -52,12 +53,25 @@ func (w *FilesWalker) GetFiles(s string, d fs.DirEntry, err error) error {
 		} else {
 			size = fi.Size()
 		}
-		sqlStmt := fmt.Sprintf("insert into files (filepath,filetype, title, album, artist,composer,genre, year, filesize)values ('%q','%s','%q','%s','%s','%s','%s',%d,%d)",
-			s, m.FileType(), m.Title(), m.Album(), m.Artist(), m.Composer(), m.Genre(), m.Year(), size)
-		_, err = w.DB.Exec(sqlStmt)
+		tx, err := w.DB.Begin()
 		if err != nil {
-			fmt.Println(err, sqlStmt)
+			fmt.Println(err)
 		}
+		stmt, err := tx.Prepare("insert into files (filepath,filetype, title, album, artist,composer,genre, year, filesize)values (?,?,?,?,?,?,?,?,?)")
+		if err != nil {
+			fmt.Println(err)
+		}
+		defer stmt.Close()
+		_, err = stmt.Exec(s, m.FileType(), m.Title(), m.Album(), m.Artist(), m.Composer(), m.Genre(), m.Year(), size)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			fmt.Println(err, stmt)
+		}
+
 		/*	*w = append(*w, FileInfos{FilePath: s,
 			FileType: m.FileType(),
 			Title:    m.Title(),
